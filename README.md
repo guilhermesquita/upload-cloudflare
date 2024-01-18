@@ -33,3 +33,16 @@ STACKS: Node.js, Fastify, Prisma, Cloudflare R2
     '.app' //ARQUIVOS macOS
  ]
  ```
+ ### Code configuration Cloudflare
+  ```ts
+ import {S3Client} from '@aws-sdk/client-s3';
+
+ export const r2 = new S3Client({
+    region: 'auto',
+    endpoint: env.CLOUDFLARE_ENDPOINT,
+    credentials: {
+        accessKeyId: env.CLOUDFLARE_ACCESS_KEY,
+        secretAccessKey: env.CLOUDFLARE_SECRET_ACCESS_KEY
+    },
+})
+ ```
