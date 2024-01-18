@@ -46,3 +46,16 @@ STACKS: Node.js, Fastify, Prisma, Cloudflare R2
     },
 })
  ```
+ ### Upload in Cloudflare
+
+ ```ts
+const signedUrl = await getSignedUrl(
+    r2,
+    new PutObjectCommand({
+        Bucket: 'bucket-name',
+        Key: 'file.mp4',
+        ContentType: 'video/mp4',
+    }),
+    {expires: 600}
+)
+ ```
