@@ -1,10 +1,14 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3"; //upload de um novo arquivo
 import fastify from "fastify";
 import { r2 } from "../lib/cloudflare";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "process";
+import { z } from "zod";
+import { randomUUID } from "crypto";
+import { PrismaClient } from "@prisma/client";
 
 const app = fastify();
+const prisma = new PrismaClient()
 
 app.get('/ping', () => {
     console.log(env.DATABASE_URL)
@@ -19,17 +23,33 @@ app.listen({
 })
 
 
-app.post('/upload', async () => {
+app.post('/upload', async (request) => {
+    const uploadBodySchema = z.object({
+        name: z.string().min(1),
+        contentType: z.string().regex(/\w+\/[-+.\w]+/)
+    })
+
+    const {name, contentType} = uploadBodySchema.parse(request.body)
+
+    const fileKey = randomUUID().concat('-').concat(name)
 
     const signedUrl = await getSignedUrl(
         r2,
         new PutObjectCommand({
             Bucket: 'apitest',
-            Key: 'file.mp4',
-            ContentType: 'video/mp4',
+            Key: fileKey,
+            ContentType: contentType,
         }),
         {expiresIn: 600}
     )
+
+    await prisma.file.create({
+        data: {
+            name,
+            contentType,
+            key: fileKey
+        }
+    })
 
     return signedUrl
 })
