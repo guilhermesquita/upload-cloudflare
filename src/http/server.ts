@@ -1,4 +1,4 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3"; //upload de um novo arquivo
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3"; //upload de um novo arquivo
 import fastify from "fastify";
 import { r2 } from "../lib/cloudflare";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -23,7 +23,7 @@ app.listen({
 })
 
 
-app.post('/upload', async (request) => {
+app.post('/uploads', async (request) => {
     const uploadBodySchema = z.object({
         name: z.string().min(1),
         contentType: z.string().regex(/\w+\/[-+.\w]+/)
@@ -43,7 +43,7 @@ app.post('/upload', async (request) => {
         {expiresIn: 600}
     )
 
-    await prisma.file.create({
+    const file = await prisma.file.create({
         data: {
             name,
             contentType,
@@ -51,5 +51,30 @@ app.post('/upload', async (request) => {
         }
     })
 
-    return signedUrl
+    return {signedUrl, fileId: file.id}
+})
+
+app.get('/uploads/:id', async (request) => {
+    const getFileParamsSchema = z.object({
+        id: z.string().cuid(),
+    })
+
+    const {id} = getFileParamsSchema.parse(request.params) 
+
+    const file = await prisma.file.findUniqueOrThrow({
+        where: {
+            id
+        }
+    })
+
+    const signedUrl = await getSignedUrl(
+        r2,
+        new GetObjectCommand({
+            Bucket: 'apitest',
+            Key: file.key
+        }),
+        {expiresIn: 600}
+    )
+
+    return {signedUrl}
 })
